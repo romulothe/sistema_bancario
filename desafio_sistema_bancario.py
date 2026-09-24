@@ -90,8 +90,13 @@ class ContaCorrente(Conta):
         self._limite_saques = limite_saques
 
     def sacar(self, valor):
+        hoje = datetime.now().date()
         numero_saques = len(
-            [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
+            [
+                transacao
+                for transacao in self.historico.transacoes
+                if transacao["tipo"] == Saque.__name__ and transacao["data"].date() == hoje
+            ]
         )
 
         excedeu_limite = valor > self._limite
@@ -129,7 +134,7 @@ class Historico:
             {
                 "tipo": transacao.__class__.__name__,
                 "valor": transacao.valor,
-                "data": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+                "data": datetime.now(),
             }
         )
 
