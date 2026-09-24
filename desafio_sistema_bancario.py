@@ -264,9 +264,13 @@ def exibir_extrato(clientes):
         extrato = "Não foram realizadas movimentações."
     else:
         for transacao in transacoes:
-            extrato += f"\n{transacao['tipo']}:\n\tR$ {transacao['valor']:.2f}"
+            extrato += (
+                f"\n{transacao['tipo']}:"
+                f"\n\tR$ {transacao['valor']:.2f}"
+                f"\n\t{transacao['data'].strftime('%d/%m/%Y %H:%M:%S')}\n"
+            )
 
-    print(extrato)
+    print(extrato, end="")
     print(f"\nSaldo:\n\tR$ {conta.saldo:.2f}")
     print("==========================================")
 
