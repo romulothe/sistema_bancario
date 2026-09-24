@@ -10,7 +10,7 @@ Projeto criado com foco em estudo, para praticar os pilares da POO em um cenári
 - **Nova conta:** criação de conta corrente vinculada a um cliente, com agência `0001` e numeração sequencial
 - **Listar contas:** exibe agência, número da conta e titular
 - **Depositar:** aceita apenas valores positivos
-- **Sacar:** valida saldo, limite de R$ 500,00 por saque e limite de 3 saques por conta
+- **Sacar:** valida saldo, limite de R$ 500,00 por saque e máximo de 3 saques por conta
 - **Extrato:** lista as movimentações e mostra o saldo atual
 
 ## Modelagem
@@ -53,7 +53,6 @@ Para começar, crie um usuário (`nu`), depois uma conta (`nc`) e então faça d
 ## Limitações conhecidas
 
 - Os dados ficam apenas em memória e são perdidos ao fechar o programa
-- O limite de 3 saques considera todos os saques da conta, e não apenas os do dia
 - Não há validação de formato para CPF e data de nascimento
 
 Pontos que pretendo melhorar em próximas versões.
