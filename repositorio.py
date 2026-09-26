@@ -163,3 +163,32 @@ def listar_transacoes(id_conta):
                 (id_conta,),
             )
             return cur.fetchall()
+
+
+def proximo_numero_conta():
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(MAX(numero), 0) + 1 FROM contas")
+            return cur.fetchone()[0]
+
+
+def listar_todas_contas():
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    contas.agencia,
+
+                    contas.numero,
+
+                    clientes.nome
+
+                FROM contas
+
+                JOIN clientes ON clientes.id_cliente = contas.id_cliente
+
+                ORDER BY contas.numero
+                """
+            )
+            return cur.fetchall()

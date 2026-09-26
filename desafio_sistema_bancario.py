@@ -1,7 +1,7 @@
 import textwrap
 from abc import ABC, abstractmethod
 from datetime import datetime
-from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, contar_saques_hoje, inserir_cliente, inserir_conta, inserir_transacao, listar_transacoes
+from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, contar_saques_hoje, inserir_cliente, inserir_conta, inserir_transacao, listar_transacoes, proximo_numero_conta, listar_todas_contas
 
 
 class Cliente:
@@ -342,9 +342,17 @@ def criar_conta(numero_conta, clientes, contas):
 
     
 def listar_contas(contas):
-    for conta in contas:
+    for agencia, numero, nome in listar_todas_contas():
         print("=" * 100)
-        print(textwrap.dedent(str(conta)))
+        print(
+            textwrap.dedent(
+                f"""\
+                    Agência:\t{agencia}
+                    C/C:\t\t{numero}
+                    Titular:\t{nome}
+                """
+            )
+        )
 
 
 def main():
@@ -367,7 +375,7 @@ def main():
             criar_cliente(clientes)
 
         elif opcao == "nc":
-            numero_conta = len(contas) + 1
+            numero_conta = proximo_numero_conta()
             criar_conta(numero_conta, clientes, contas)
 
         elif opcao == "lc":
