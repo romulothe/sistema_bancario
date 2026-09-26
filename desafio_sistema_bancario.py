@@ -1,7 +1,7 @@
 import textwrap
 from abc import ABC, abstractmethod
 from datetime import datetime
-from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, inserir_cliente, inserir_conta
+from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, contar_saques_hoje, inserir_cliente, inserir_conta, inserir_transacao, listar_transacoes
 
 
 class Cliente:
@@ -212,43 +212,69 @@ def recuperar_conta_cliente(cliente):
 
 def depositar(clientes):
     cpf = input("Informe o CPF do cliente: ")
-    cliente = filtrar_cliente(cpf, clientes)
+    cliente = buscar_cliente_por_cpf(cpf)
 
     if not cliente:
         print("\nCliente não encontrado!")
         return
 
     valor = float(input("Informe o valor do depósito: "))
-    transacao = Deposito(valor)
+
+    if valor <= 0:
+        print("\nOperação inválida! O valor informado não é válido.")
+        return
 
     conta = recuperar_conta_cliente(cliente)
     if not conta:
         return
 
-    cliente.realizar_transacao(conta, transacao)
+    inserir_transacao(conta[0], "Deposito", valor)
+
+    print(f"\nDepósito de R$: {valor:.2f} realizado com sucesso!")
 
 
 def sacar(clientes):
     cpf = input("Informe o CPF do cliente: ")
-    cliente = filtrar_cliente(cpf, clientes)
+    cliente = buscar_cliente_por_cpf(cpf)
 
     if not cliente:
         print("\nCliente não encontrado!")
         return
 
     valor = float(input("Informe o valor do saque: "))
-    transacao = Saque(valor)
 
     conta = recuperar_conta_cliente(cliente)
     if not conta:
         return
 
-    cliente.realizar_transacao(conta, transacao)
+    id_conta, agencia, numero, saldo, limite, limite_saques = conta
+
+    numero_saques = contar_saques_hoje(id_conta)
+
+    excedeu_saldo = valor > saldo
+    excedeu_limite = valor > limite
+    excedeu_saques = numero_saques >= limite_saques
+
+    if valor <= 0:
+        print("\nOperação inválida! O valor informado não é válido.")
+
+    elif excedeu_saldo:
+        print("\nOperação inválida! Você não tem saldo suficiente.")
+
+    elif excedeu_limite:
+        print(f"\nOperação inválida! O valor do saque excede o limite de R$: {limite:.2f} por saque.")
+
+    elif excedeu_saques:
+        print("\nOperação inválida! Número máximo de saques diário excedido.")
+
+    else:
+        inserir_transacao(id_conta, "Saque", valor)
+        print(f"\nSaque de R$: {valor:.2f} realizado com sucesso!")
 
 
 def exibir_extrato(clientes):
     cpf = input("Informe o CPF do cliente: ")
-    cliente = filtrar_cliente(cpf, clientes)
+    cliente = buscar_cliente_por_cpf(cpf)
 
     if not cliente:
         print("\nCliente não encontrado!")
@@ -258,22 +284,24 @@ def exibir_extrato(clientes):
     if not conta:
         return
 
+    id_conta, agencia, numero, saldo, limite, limite_saques = conta
+
     print("\n================ EXTRATO ================")
-    transacoes = conta.historico.transacoes
+    transacoes = listar_transacoes(id_conta)
 
     extrato = ""
     if not transacoes:
         extrato = "Não foram realizadas movimentações."
     else:
-        for transacao in transacoes:
+        for tipo, valor, data_hora in transacoes:
             extrato += (
-                f"\n{transacao['tipo']}:"
-                f"\n\tR$ {transacao['valor']:.2f}"
-                f"\n\t{transacao['data'].strftime('%d/%m/%Y %H:%M:%S')}\n"
+                f"\n{tipo}:"
+                f"\n\tR$ {valor:.2f}"
+                f"\n\t{data_hora.strftime('%d/%m/%Y %H:%M:%S')}\n"
             )
 
     print(extrato, end="")
-    print(f"\nSaldo:\n\tR$ {conta.saldo:.2f}")
+    print(f"\nSaldo:\n\tR$ {saldo:.2f}")
     print("==========================================")
 
 

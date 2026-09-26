@@ -90,3 +90,76 @@ def buscar_conta_por_cliente(id_cliente):
                 (id_cliente,),
             )
             return cur.fetchone()
+
+
+def inserir_transacao(id_conta, tipo, valor):
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO transacoes (
+                    id_conta,
+
+                    tipo,
+
+                    valor
+                )
+                VALUES (%s, %s, %s)
+                """,
+                (id_conta, tipo, valor),
+            )
+            cur.execute(
+                """
+                UPDATE contas
+
+                SET saldo = saldo + %s
+
+                WHERE id_conta = %s
+                """,
+                (valor if tipo == "Deposito" else -valor, id_conta),
+            )
+        conn.commit()
+
+
+def contar_saques_hoje(id_conta):
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*)
+
+                FROM transacoes
+
+                WHERE id_conta = %s
+
+                    AND tipo = 'Saque'
+
+                    AND data_hora::date = CURRENT_DATE
+                """,
+                (id_conta,),
+            )
+            return cur.fetchone()[0]
+
+
+def listar_transacoes(id_conta):
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    tipo,
+
+                    valor,
+
+                    data_hora
+
+                FROM transacoes
+
+                WHERE id_conta = %s
+
+                ORDER BY data_hora
+                """,
+                (id_conta,),
+            )
+            return cur.fetchall()
