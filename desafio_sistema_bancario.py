@@ -1,7 +1,7 @@
 import textwrap
 from abc import ABC, abstractmethod
 from datetime import datetime
-from repositorio import buscar_cliente_por_cpf, inserir_cliente
+from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, inserir_cliente, inserir_conta
 
 
 class Cliente:
@@ -201,12 +201,13 @@ def filtrar_cliente(cpf, clientes):
 
 
 def recuperar_conta_cliente(cliente):
-    if not cliente.contas:
+    conta = buscar_conta_por_cliente(cliente[0])
+
+    if not conta:
         print("\nCliente não possui conta!")
         return
 
-    # FIXME: não permite cliente escolher a conta
-    return cliente.contas[0]
+    return conta
 
 
 def depositar(clientes):
@@ -301,19 +302,17 @@ def criar_cliente(clientes):
 
 def criar_conta(numero_conta, clientes, contas):
     cpf = input("Informe o CPF do cliente: ")
-    cliente = filtrar_cliente(cpf, clientes)
+    cliente = buscar_cliente_por_cpf(cpf)
 
     if not cliente:
         print("\nCliente não encontrado, fluxo de criação de conta encerrado!")
         return
 
-    conta = ContaCorrente.nova_conta(cliente = cliente, numero = numero_conta)
-    contas.append(conta)
-    cliente.contas.append(conta)
+    inserir_conta(cliente[0], numero_conta)
 
     print("\nConta criada com sucesso!")
 
-
+    
 def listar_contas(contas):
     for conta in contas:
         print("=" * 100)
