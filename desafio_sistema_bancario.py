@@ -1,6 +1,7 @@
 import textwrap
 from abc import ABC, abstractmethod
 from datetime import datetime
+from repositorio import buscar_cliente_por_cpf, inserir_cliente
 
 
 class Cliente:
@@ -277,19 +278,23 @@ def exibir_extrato(clientes):
 
 def criar_cliente(clientes):
     cpf = input("Informe o CPF (somente número): ")
-    cliente = filtrar_cliente(cpf, clientes)
+    cliente_existente = buscar_cliente_por_cpf(cpf)
 
-    if cliente:
+    if cliente_existente:
         print("\nJá existe cliente com esse CPF!")
         return
 
     nome = input("Informe o nome completo: ")
-    data_nascimento = input("Informe a data de nascimento (dd-mm-aaaa): ")
-    endereco = input("Informe o endereço (logradouro, nro - bairro - cidade/sigla estado): ")
+    data_nascimento_texto = input("Informe a data de nascimento (dd-mm-aaaa): ")
+    endereco = input("Informe o endereço (logradouro, nº, bairro, cidade/sigla estado): ")
 
-    cliente = PessoaFisica(nome = nome, data_nascimento = data_nascimento, cpf = cpf, endereco = endereco)
+    try:
+        data_nascimento = datetime.strptime(data_nascimento_texto, "%d-%m-%Y").date()
+    except ValueError:
+        print("\nData de nascimento inválida! Use o formato dd-mm-aaaa.")
+        return
 
-    clientes.append(cliente)
+    inserir_cliente(cpf, nome, data_nascimento, endereco)
 
     print("\nCliente criado com sucesso!")
 
