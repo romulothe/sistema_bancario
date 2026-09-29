@@ -1,18 +1,30 @@
 import textwrap
 from datetime import datetime
-from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, contar_saques_hoje, inserir_cliente, inserir_conta, inserir_transacao, listar_transacoes, proximo_numero_conta, listar_todas_contas
+from autenticacao import gerar_hash_senha, verificar_senha
+from repositorio import buscar_cliente_por_cpf, buscar_conta_por_cliente, contar_saques_hoje, inserir_cliente, inserir_conta, inserir_transacao, listar_transacoes, proximo_numero_conta, listar_todas_contas, transferir_entre_contas, atualizar_senha
 
-
-def menu():
+def menu_inicial():
     menu = """\n
     ================ MENU ================
+    [login]\tEntrar
+    [nu]\tNovo usuário
+    [q]\tSair
+    => """
+    return input(textwrap.dedent(menu))
+
+
+def menu_conta(nome):
+    menu = f"""\n
+    ============ Olá, {nome}! ============
     [d]\tDepositar
     [s]\tSacar
+    [t]\tTransferir
     [e]\tExtrato
     [nc]\tNova conta
     [lc]\tListar contas
-    [nu]\tNovo usuário
-    [q]\tSair
+    [ts]\tTrocar senha
+    [sair]\tSair da conta
+    [q]\tSair do sistema
     => """
     return input(textwrap.dedent(menu))
 
@@ -27,14 +39,21 @@ def recuperar_conta_cliente(cliente):
     return conta
 
 
-def depositar(clientes):
-    cpf = input("Informe o CPF do cliente: ")
+def fazer_login():
+    cpf = input("Informe o CPF: ")
+    senha = input("Informe a senha: ")
+
     cliente = buscar_cliente_por_cpf(cpf)
 
-    if not cliente:
-        print("\nCliente não encontrado!")
-        return
+    if not cliente or not verificar_senha(senha, cliente[-1]):
+        print("\nCPF ou senha inválidos!")
+        return None
 
+    print(f"\nBem-vindo(a), {cliente[2]}!")
+    return cliente
+
+
+def depositar(cliente):
     valor = float(input("Informe o valor do depósito: "))
 
     if valor <= 0:
@@ -50,14 +69,7 @@ def depositar(clientes):
     print(f"\nDepósito de R$: {valor:.2f} realizado com sucesso!")
 
 
-def sacar(clientes):
-    cpf = input("Informe o CPF do cliente: ")
-    cliente = buscar_cliente_por_cpf(cpf)
-
-    if not cliente:
-        print("\nCliente não encontrado!")
-        return
-
+def sacar(cliente):
     valor = float(input("Informe o valor do saque: "))
 
     conta = recuperar_conta_cliente(cliente)
@@ -89,14 +101,45 @@ def sacar(clientes):
         print(f"\nSaque de R$: {valor:.2f} realizado com sucesso!")
 
 
-def exibir_extrato(clientes):
-    cpf = input("Informe o CPF do cliente: ")
-    cliente = buscar_cliente_por_cpf(cpf)
-
-    if not cliente:
-        print("\nCliente não encontrado!")
+def transferir(cliente):
+    conta_origem = recuperar_conta_cliente(cliente)
+    if not conta_origem:
         return
 
+    cpf_destino = input("Informe o CPF da conta de destino: ")
+    cliente_destino = buscar_cliente_por_cpf(cpf_destino)
+
+    if not cliente_destino:
+        print("\nCliente de destino não encontrado!")
+        return
+
+    conta_destino = recuperar_conta_cliente(cliente_destino)
+    if not conta_destino:
+        return
+
+    id_conta_origem, agencia_origem, numero_origem, saldo_origem, limite, limite_saques = conta_origem
+    id_conta_destino = conta_destino[0]
+
+    if id_conta_origem == id_conta_destino:
+        print("\nOperação inválida! Não é possível transferir para a mesma conta.")
+        return
+
+    valor = float(input("Informe o valor da transferência: "))
+
+    if valor <= 0:
+        print("\nOperação inválida! O valor informado não é válido.")
+        return
+
+    if valor > saldo_origem:
+        print("\nOperação inválida! Você não tem saldo suficiente.")
+        return
+
+    transferir_entre_contas(id_conta_origem, id_conta_destino, valor)
+
+    print(f"\nTransferência de R$: {valor:.2f} realizada com sucesso!")
+
+
+def exibir_extrato(cliente):
     conta = recuperar_conta_cliente(cliente)
     if not conta:
         return
@@ -122,7 +165,27 @@ def exibir_extrato(clientes):
     print("==========================================")
 
 
-def criar_cliente(clientes):
+def trocar_senha(cliente):
+    senha_atual = input("Informe a senha atual: ")
+
+    if not verificar_senha(senha_atual, cliente[-1]):
+        print("\nSenha atual incorreta!")
+        return
+
+    nova_senha = input("Informe a nova senha: ")
+    confirmacao_nova_senha = input("Confirme a nova senha: ")
+
+    if nova_senha != confirmacao_nova_senha:
+        print("\nAs senhas não coincidem!")
+        return
+
+    senha_hash = gerar_hash_senha(nova_senha)
+    atualizar_senha(cliente[1], senha_hash)
+
+    print("\nSenha alterada com sucesso!")
+
+
+def criar_cliente():
     cpf = input("Informe o CPF (somente número): ")
     cliente_existente = buscar_cliente_por_cpf(cpf)
 
@@ -140,25 +203,28 @@ def criar_cliente(clientes):
         print("\nData de nascimento inválida! Use o formato dd-mm-aaaa.")
         return
 
-    inserir_cliente(cpf, nome, data_nascimento, endereco)
+    senha = input("Crie uma senha: ")
+    confirmacao_senha = input("Confirme a senha: ")
+
+    if senha != confirmacao_senha:
+        print("\nAs senhas não coincidem!")
+        return
+
+    senha_hash = gerar_hash_senha(senha)
+
+    inserir_cliente(cpf, nome, data_nascimento, endereco, senha_hash)
 
     print("\nCliente criado com sucesso!")
 
 
-def criar_conta(numero_conta, clientes, contas):
-    cpf = input("Informe o CPF do cliente: ")
-    cliente = buscar_cliente_por_cpf(cpf)
-
-    if not cliente:
-        print("\nCliente não encontrado, fluxo de criação de conta encerrado!")
-        return
-
+def criar_conta(cliente):
+    numero_conta = proximo_numero_conta()
     inserir_conta(cliente[0], numero_conta)
 
     print("\nConta criada com sucesso!")
 
 
-def listar_contas(contas):
+def listar_contas():
     for agencia, numero, nome in listar_todas_contas():
         print("=" * 100)
         print(
@@ -173,36 +239,53 @@ def listar_contas(contas):
 
 
 def main():
-    clientes = []
-    contas = []
+    cliente_logado = None
 
     while True:
-        opcao = menu()
+        if not cliente_logado:
+            opcao = menu_inicial()
 
-        if opcao == "d":
-            depositar(clientes)
+            if opcao == "login":
+                cliente_logado = fazer_login()
 
-        elif opcao == "s":
-            sacar(clientes)
+            elif opcao == "nu":
+                criar_cliente()
 
-        elif opcao == "e":
-            exibir_extrato(clientes)
+            elif opcao == "q":
+                break
 
-        elif opcao == "nu":
-            criar_cliente(clientes)
-
-        elif opcao == "nc":
-            numero_conta = proximo_numero_conta()
-            criar_conta(numero_conta, clientes, contas)
-
-        elif opcao == "lc":
-            listar_contas(contas)
-
-        elif opcao == "q":
-            break
+            else:
+                print("\nOperação inválida, por favor selecione novamente a operação desejada.")
 
         else:
-            print("\nOperação inválida, por favor selecione novamente a operação desejada.")
+            opcao = menu_conta(cliente_logado[2])
+
+            if opcao == "d":
+                depositar(cliente_logado)
+
+            elif opcao == "s":
+                sacar(cliente_logado)
+
+            elif opcao == "t":
+                transferir(cliente_logado)
+
+            elif opcao == "e":
+                exibir_extrato(cliente_logado)
+
+            elif opcao == "nc":
+                criar_conta(cliente_logado)
+
+            elif opcao == "lc":
+                listar_contas()
+
+            elif opcao == "sair":
+                cliente_logado = None
+
+            elif opcao == "q":
+                break
+
+            else:
+                print("\nOperação inválida, por favor selecione novamente a operação desejada.")
 
 
 if __name__ == "__main__":

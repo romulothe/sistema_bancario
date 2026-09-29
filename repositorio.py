@@ -1,20 +1,25 @@
 from conexao import conectar
 
 
-def inserir_cliente(cpf, nome, data_nascimento, endereco):
+def inserir_cliente(cpf, nome, data_nascimento, endereco, senha_hash):
     with conectar() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO clientes (
                     cpf,
+
                     nome,
+
                     data_nascimento,
-                    endereco
+
+                    endereco,
+
+                    senha_hash
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 """,
-                (cpf, nome, data_nascimento, endereco),
+                (cpf, nome, data_nascimento, endereco, senha_hash),
             )
         conn.commit()
 
@@ -33,7 +38,9 @@ def buscar_cliente_por_cpf(cpf):
 
                     data_nascimento,
 
-                    endereco
+                    endereco,
+
+                    senha_hash
 
                 FROM clientes
 
@@ -192,3 +199,71 @@ def listar_todas_contas():
                 """
             )
             return cur.fetchall()
+
+
+def transferir_entre_contas(id_conta_origem, id_conta_destino, valor):
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO transacoes (
+                    id_conta,
+
+                    tipo,
+
+                    valor
+                )
+                VALUES (%s, %s, %s)
+                """,
+                (id_conta_origem, "Transferencia Enviada", valor),
+            )
+            cur.execute(
+                """
+                UPDATE contas
+
+                SET saldo = saldo - %s
+
+                WHERE id_conta = %s
+                """,
+                (valor, id_conta_origem),
+            )
+            cur.execute(
+                """
+                INSERT INTO transacoes (
+                    id_conta,
+
+                    tipo,
+
+                    valor
+                )
+                VALUES (%s, %s, %s)
+                """,
+                (id_conta_destino, "Transferencia Recebida", valor),
+            )
+            cur.execute(
+                """
+                UPDATE contas
+
+                SET saldo = saldo + %s
+
+                WHERE id_conta = %s
+                """,
+                (valor, id_conta_destino),
+            )
+        conn.commit()
+
+
+def atualizar_senha(cpf, senha_hash):
+    with conectar() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE clientes
+
+                SET senha_hash = %s
+
+                WHERE cpf = %s
+                """,
+                (senha_hash, cpf),
+            )
+        conn.commit()
